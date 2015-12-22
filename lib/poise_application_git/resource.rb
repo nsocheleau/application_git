@@ -84,7 +84,7 @@ module PoiseApplicationGit
     # @api private
     # @return [String]
     def ssh_wrapper_path
-      @ssh_wrapper_path ||= ::File.expand_path("~#{user}/.ssh/ssh_wrapper_#{Zlib.crc32(name)}")
+      @ssh_wrapper_path ||= "~#{parent.owner}/.ssh/ssh_wrapper_#{Zlib.crc32(name)}"
     end
 
     # Guess if the deploy key is a local path or literal value.
@@ -105,7 +105,7 @@ module PoiseApplicationGit
       @deploy_key_path ||= if deploy_key_is_local?
         deploy_key
       else
-        ::File.expand_path("~#{user}/.ssh/id_deploy_#{Zlib.crc32(name)}")
+        "~#{parent.owner}/.ssh/id_deploy_#{Zlib.crc32(name)}"
       end
     end
   end
@@ -144,9 +144,9 @@ module PoiseApplicationGit
     #
     # @return [void]
     def create_dotssh
-      directory ::File.expand_path("~#{new_resource.user}/.ssh") do
-        owner new_resource.user
-        group new_resource.group
+      directory ::File.expand_path("~#{new_resource.parent.owner}/.ssh") do
+        owner new_resource.parent.owner
+        group new_resource.parent.group
         mode '755'
       end
     end
@@ -157,9 +157,9 @@ module PoiseApplicationGit
     def write_deploy_key
       # Check if we have a local path or some actual content
       return if new_resource.deploy_key_is_local?
-      file new_resource.deploy_key_path do
-        owner new_resource.user
-        group new_resource.group
+      file ::File.expand_path(new_resource.deploy_key_path) do
+        owner new_resource.parent.owner
+        group new_resource.parent.group
         mode '600'
         content new_resource.deploy_key
         sensitive true
@@ -171,9 +171,9 @@ module PoiseApplicationGit
     # @return [void]
     def write_ssh_wrapper
       # Write out the GIT_SSH script, it should already be enabled above
-      file new_resource.ssh_wrapper_path do
-        owner new_resource.user
-        group new_resource.group
+      file ::File.expand_path(new_resource.ssh_wrapper_path) do
+        owner new_resource.parent.owner
+        group new_resource.parent.group
         mode '700'
         content %Q{#!/bin/sh\n/usr/bin/env ssh #{'-o "StrictHostKeyChecking=no" ' unless new_resource.strict_ssh}-i "#{new_resource.deploy_key_path}" $@\n}
       end
